@@ -2,9 +2,8 @@
 
 use dioxus::prelude::*;
 
-pub fn Sidebar(cx: Scope) -> Element {
-    let page = use_state(&cx, || "home");
 
+pub fn Sidebar(cx: Scope) -> Element {
     cx.render(rsx!{
         div {
             id: "sidebar",
@@ -14,13 +13,18 @@ pub fn Sidebar(cx: Scope) -> Element {
             SidebarItems {
                 name: "Home",
                 icon: "home",
-                onclick: move |_| page = "home",
-            }
+                onclick_to: "home",
+            },
         }
     })
 }
 
-pub fn SidebarItems(cx: Scope<SidebarItemStruct>) -> Element {
+#[derive(Props)]
+pub struct SidebarItemsProps {
+    pub items: &'static Vec<SidebarItemProps>,
+}
+
+pub fn SidebarItems(cx: Scope<SidebarItemsStruct>) -> Element {
     cx.render(rsx!{
         div {
             class: "sidebar-items",
@@ -29,7 +33,7 @@ pub fn SidebarItems(cx: Scope<SidebarItemStruct>) -> Element {
                 icon: "{cx.props.icon}",
                 button {
                     class: "sidebar-item-button",
-                    onclick: move |_| (cx.props.onclick)(cx),
+                    onclick: move |_| crate::PAGE.lock().unwrap().clone_from(&cx.props.onclick_to),
                     "{cx.props.name}"
                 }
             }
@@ -37,19 +41,16 @@ pub fn SidebarItems(cx: Scope<SidebarItemStruct>) -> Element {
     })
 }
 
-#[derive(PartialEq, Props)]
-pub struct SidebarItemsProps {
-    pub items: Vec<SidebarItemStruct>,
-}
-
-#[derive(PartialEq, Props)]
-pub struct SidebarItemStruct{
+#[derive(Props)]
+pub struct SidebarItemProps {
     pub name: &'static str,
     pub icon: &'static str,
-    pub onclick: fn(&mut Scope<SidebarItemStruct>) -> (),
+    pub onclick_to: &'static str,
+    #[props(optional)]
+    pub body: Element<'static>,
 }
 
-pub fn SidebarItem(cx: Scope<SidebarItemStruct>) -> Element {
+pub fn SidebarItem(cx: Scope<SidebarItemProps>) -> Element {
     cx.render(rsx! {
         div {
             class: "sidebar-item",

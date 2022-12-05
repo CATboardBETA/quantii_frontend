@@ -1,9 +1,68 @@
 #[allow(non_snake_case)]
 
 use dioxus::prelude::*;
+use crate::PAGE;
 
 
 pub fn Sidebar(cx: Scope) -> Element {
+    let sidebar_items = vec![
+        SidebarItemProps {
+            name: "Home",
+            icon: "home",
+            onclick_to: "Home",
+            body: rsx!{
+                button {
+                    alt: "Home",
+                    onclick: move |_| {
+                        *PAGE.lock().unwrap() = "home"
+                        cx.needs_update();
+                    }
+                }
+            }
+        },
+        SidebarItemProps {
+            name: "Our Mission",
+            icon: "target",
+            onclick_to: "Mission",
+            body: rsx!{
+                button {
+                    alt: "Mission",
+                    onclick: move |_| {
+                        *PAGE.lock().unwrap() = "mission"
+                        cx.needs_update();
+                    }
+                }
+            }
+        },
+        SidebarItemProps {
+            name: "About",
+            icon: "info",
+            onclick_to: "About",
+            body: rsx!{
+                button {
+                    alt: "About",
+                    onclick: move |_| {
+                        *PAGE.lock().unwrap() = "about"
+                        cx.needs_update();
+                    }
+                }
+            }
+        },
+        SidebarItemProps {
+            name: "Contact",
+            icon: "mail",
+            onclick_to: "Contact",
+            body: rsx!{
+                button {
+                    alt: "Contact",
+                    onclick: move |_| {
+                        *PAGE.lock().unwrap() = "contact"
+                        cx.needs_update();
+                    }
+                }
+            }
+        }
+    ];
     cx.render(rsx!{
         div {
             id: "sidebar",
@@ -11,10 +70,8 @@ pub fn Sidebar(cx: Scope) -> Element {
                 href: "sidebar.css",
             },
             SidebarItems {
-                name: "Home",
-                icon: "home",
-                onclick_to: "home",
-            },
+                items: &sidebar_items
+            }
         }
     })
 }
@@ -24,19 +81,27 @@ pub struct SidebarItemsProps {
     pub items: &'static Vec<SidebarItemProps>,
 }
 
-pub fn SidebarItems(cx: Scope<SidebarItemsStruct>) -> Element {
+impl PartialEq for SidebarItemsProps {
+    fn eq(&self, other: &Self) -> bool {
+        if self.items.len() != other.items.len() {
+            return false;
+        }
+        self.items.clone().into_iter().zip(other.items.clone().into_iter()).all(|(a, b)| a == b)
+    }
+}
+
+pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
     cx.render(rsx!{
         div {
             class: "sidebar-items",
-            SidebarItem {
-                name: "{cx.props.name}",
-                icon: "{cx.props.icon}",
-                button {
-                    class: "sidebar-item-button",
-                    onclick: move |_| crate::PAGE.lock().unwrap().clone_from(&cx.props.onclick_to),
-                    "{cx.props.name}"
+            [for item in cx.props.items {
+                SidebarItem {
+                    name: item.name,
+                    icon: item.icon,
+                    onclick_to: item.onclick_to,
+                    body: item.body
                 }
-            }
+            }]
         }
     })
 }
@@ -46,25 +111,45 @@ pub struct SidebarItemProps {
     pub name: &'static str,
     pub icon: &'static str,
     pub onclick_to: &'static str,
-    #[props(optional)]
-    pub body: Element<'static>,
+    /// Usage:
+    /// ```
+    /// SidebarItemProps {
+    ///     name: "Home",
+    ///     icon: "home",
+    ///     onclick_to: "Home",
+    ///     body: rsx!{
+    ///         button {
+    ///             alt: "Click me",
+    ///             onclick: |_| PAGE.lock().unwrap().replace("Home")
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub body: LazyNodes<'static, 'static>
+}
+
+impl PartialEq for SidebarItemProps {
+    /// WARNING - This does not compare the body!!!
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.icon == other.icon && self.onclick_to == other.onclick_to
+    }
 }
 
 pub fn SidebarItem(cx: Scope<SidebarItemProps>) -> Element {
-    cx.render(rsx! {
+    cx.render(rsx!{
         div {
             class: "sidebar-item",
             div {
-                class: "sidebar-item-text",
-                "{cx.props.name}"
+                class: "sidebar-item-icon",
+                i {
+                    class: "{[format!("sidebar-item sidebar-item-{}", cx.props.icon)]"}
+                }
             },
             div {
-                class: "sidebar-item-icon",
-                img {
-                    src: "{cx.props.icon}",
-                    alt: "{cx.props.name}",
-                }
-            }
+                class: "sidebar-item-name",
+                "{cx.props.name}"
+            },
+            cx.props.body
         }
     })
 }

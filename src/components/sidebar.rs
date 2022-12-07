@@ -91,17 +91,21 @@ impl PartialEq for SidebarItemsProps {
 }
 
 pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
+    let items_nodes: LazyNodes = cx.props.items.clone().into_iter().map(|item| {
+        let item = item.clone();
+        cx.render(rsx!{
+            SidebarItem {
+                name: item.name,
+                icon: item.icon,
+                onclick_to: item.onclick_to,
+                body: item.body
+            }
+        })
+    }).collect();
     cx.render(rsx!{
         div {
             class: "sidebar-items",
-            [for item in cx.props.items {
-                SidebarItem {
-                    name: item.name,
-                    icon: item.icon,
-                    onclick_to: item.onclick_to,
-                    body: item.body
-                }
-            }]
+
         }
     })
 }
@@ -136,13 +140,14 @@ impl PartialEq for SidebarItemProps {
 }
 
 pub fn SidebarItem(cx: Scope<SidebarItemProps>) -> Element {
+    let class = format!("sidebar-item sidebar-item-{}", cx.props.onclick_to);
     cx.render(rsx!{
         div {
             class: "sidebar-item",
             div {
                 class: "sidebar-item-icon",
                 i {
-                    class: "{[format!("sidebar-item sidebar-item-{}", cx.props.icon)]"}
+                    class: "{class}",
                 }
             },
             div {

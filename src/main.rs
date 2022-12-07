@@ -22,7 +22,10 @@ lazy_static! {
     pub static ref PAGE: Mutex<Page> = Mutex::new("home");
 }
 
+pub struct
+
 fn app(cx: Scope) -> Element {
+    use_context_provider(&cx, )
     cx.render(rsx!{
         Sidebar {
 

@@ -1,3 +1,5 @@
+use std::ops::Deref;
+use dioxus::core::IntoVNode;
 #[allow(non_snake_case)]
 
 use dioxus::prelude::*;
@@ -91,23 +93,19 @@ impl PartialEq for SidebarItemsProps {
 }
 
 pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
-    let items_nodes: LazyNodes = cx.props.items.clone().into_iter().map(|item| {
+    let items = cx.props.items.clone();
+    let item_nodes: Vec<VNode> = items.into_iter().map(|item| {
         let item = item.clone();
-        cx.render(rsx!{
+        // Must use parenthetical form of rsx! macro to avoid weird syntax issues
+        rsx!(
             SidebarItem {
                 name: item.name,
                 icon: item.icon,
                 onclick_to: item.onclick_to,
                 body: item.body
             }
-        })
+        ).into_vnode()
     }).collect();
-    cx.render(rsx!{
-        div {
-            class: "sidebar-items",
-
-        }
-    })
 }
 
 #[derive(Props)]
@@ -129,7 +127,7 @@ pub struct SidebarItemProps {
     ///     }
     /// }
     /// ```
-    pub body: LazyNodes<'static, 'static>
+    pub body: VNode<'static>
 }
 
 impl PartialEq for SidebarItemProps {

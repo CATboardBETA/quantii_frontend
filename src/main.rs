@@ -6,8 +6,6 @@ mod components;
 
 use dioxus::prelude::*;
 
-use components::sidebar::Sidebar;
-
 pub fn main() {
     dioxus::web::launch(App);
 }

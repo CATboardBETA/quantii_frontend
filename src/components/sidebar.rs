@@ -1,70 +1,72 @@
-use std::ops::Deref;
 use dioxus::core::IntoVNode;
 #[allow(non_snake_case)]
 
 use dioxus::prelude::*;
 use crate::PAGE;
+use crate::NODE_FACTORY;
 
 
 pub fn Sidebar(cx: Scope) -> Element {
+    let set_page = use_set(&cx, PAGE);
+    let node_factory = use_read(&cx, NODE_FACTORY);
+    let node_factory = &node_factory.unwrap();
+
     let sidebar_items = vec![
         SidebarItemProps {
             name: "Home",
             icon: "home",
-            onclick_to: "Home",
             body: rsx!{
                 button {
                     alt: "Home",
                     onclick: move |_| {
-                        *PAGE.lock().unwrap() = "home"
+                        set_page("home");
                         cx.needs_update();
                     }
                 }
-            }
+            }.into_vnode(**node_factory),
         },
         SidebarItemProps {
             name: "Our Mission",
             icon: "target",
-            onclick_to: "Mission",
             body: rsx!{
                 button {
                     alt: "Mission",
                     onclick: move |_| {
-                        *PAGE.lock().unwrap() = "mission"
+                        set_page("mission");
                         cx.needs_update();
                     }
                 }
-            }
+            }.into_vnode(**node_factory),
         },
         SidebarItemProps {
             name: "About",
             icon: "info",
-            onclick_to: "About",
             body: rsx!{
                 button {
                     alt: "About",
                     onclick: move |_| {
-                        *PAGE.lock().unwrap() = "about"
+                        set_page("about");
                         cx.needs_update();
                     }
                 }
-            }
+            }.into_vnode(**node_factory),
         },
         SidebarItemProps {
             name: "Contact",
             icon: "mail",
-            onclick_to: "Contact",
             body: rsx!{
                 button {
                     alt: "Contact",
                     onclick: move |_| {
-                        *PAGE.lock().unwrap() = "contact"
+                        set_page("contact");
                         cx.needs_update();
                     }
                 }
-            }
+            }.into_vnode(**node_factory),
         }
     ];
+
+    let the_sidebar_items = &sidebar_items;
     cx.render(rsx!{
         div {
             id: "sidebar",
@@ -72,7 +74,7 @@ pub fn Sidebar(cx: Scope) -> Element {
                 href: "sidebar.css",
             },
             SidebarItems {
-                items: &sidebar_items
+                items: the_sidebar_items,
             }
         }
     })
@@ -93,36 +95,41 @@ impl PartialEq for SidebarItemsProps {
 }
 
 pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
+    let node_factory= use_read(&cx, NODE_FACTORY);
+    let node_factory = &node_factory.unwrap();
+
     let items = cx.props.items.clone();
-    let item_nodes: Vec<VNode> = items.into_iter().map(|item| {
-        let item = item.clone();
-        // Must use parenthetical form of rsx! macro to avoid weird syntax issues
+    let return_items = items.into_iter().map(|item| {
         rsx!(
             SidebarItem {
                 name: item.name,
                 icon: item.icon,
-                onclick_to: item.onclick_to,
                 body: item.body
             }
-        ).into_vnode()
-    }).collect();
+        ).into_vnode(**node_factory)
+    }).collect::<Vec<VNode>>();
+
+    cx.render(rsx!{
+        div {
+            id: "sidebar-items",
+            return_items
+        }
+    })
 }
 
 #[derive(Props)]
 pub struct SidebarItemProps {
     pub name: &'static str,
     pub icon: &'static str,
-    pub onclick_to: &'static str,
     /// Usage:
     /// ```
     /// SidebarItemProps {
     ///     name: "Home",
     ///     icon: "home",
-    ///     onclick_to: "Home",
     ///     body: rsx!{
     ///         button {
     ///             alt: "Click me",
-    ///             onclick: |_| PAGE.lock().unwrap().replace("Home")
+    ///             onclick: |_| page_set("home")
     ///         }
     ///     }
     /// }
@@ -133,12 +140,13 @@ pub struct SidebarItemProps {
 impl PartialEq for SidebarItemProps {
     /// WARNING - This does not compare the body!!!
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.icon == other.icon && self.onclick_to == other.onclick_to
+        self.name == other.name && self.icon == other.icon
     }
 }
 
-pub fn SidebarItem(cx: Scope<SidebarItemProps>) -> Element {
-    let class = format!("sidebar-item sidebar-item-{}", cx.props.onclick_to);
+pub fn SidebarItem(cx: Scope<'static, SidebarItemProps>) -> Element {
+    let class = format!("sidebar-item sidebar-item-{}", cx.props.name.to_lowercase().replace(" ", "-"));
+
     cx.render(rsx!{
         div {
             class: "sidebar-item",

@@ -1,17 +1,19 @@
-use crate::PAGE;
-use dioxus::core::{DynamicNode, IntoDynNode};
-#[allow(non_snake_case)]
+use crate::{PAGE, SCOPE, ScopeProvider};
 use dioxus::prelude::*;
 use fermi::{use_read, use_set};
 
 pub fn Sidebar(cx: Scope) -> Element {
     let set_page = use_set(&cx, PAGE);
+    let scope: &Option<ScopeProvider<'static, ()>> = use_read(&cx, SCOPE);
+    let scope = scope.as_ref().unwrap();
+    let scope = &scope.0;
+    let scope = *scope;
 
     let sidebar_items = vec![
         SidebarItemProps {
             name: "Home",
             icon: "home",
-            body: rsx! {
+            body: cx.render(rsx! {
                 button {
                     alt: "Home",
                     onclick: move |_| {
@@ -19,13 +21,12 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }
-            .into_vnode(&cx),
+            })
         },
         SidebarItemProps {
             name: "Our Mission",
             icon: "target",
-            body: rsx! {
+            body: cx.render(rsx! {
                 button {
                     alt: "Mission",
                     onclick: move |_| {
@@ -33,13 +34,12 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }
-            .into_vnode(&cx),
+            })
         },
         SidebarItemProps {
             name: "About",
             icon: "info",
-            body: rsx! {
+            body: cx.render(rsx! {
                 button {
                     alt: "About",
                     onclick: move |_| {
@@ -47,13 +47,12 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }
-            .into_vnode(&cx),
+            })
         },
         SidebarItemProps {
             name: "Contact",
             icon: "mail",
-            body: rsx! {
+            body: cx.render(rsx! {
                 button {
                     alt: "Contact",
                     onclick: move |_| {
@@ -61,12 +60,11 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }
-            .into_vnode(&cx),
+            })
         },
     ];
 
-    let the_sidebar_items = &sidebar_items;
+    let the_sidebar_items: &'static Vec<SidebarItemProps> = Box::leak(Box::new(sidebar_items));
     cx.render(rsx! {
         div {
             id: "sidebar",
@@ -104,21 +102,22 @@ pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
     let return_items = items
         .into_iter()
         .map(|item| {
-            rsx!(SidebarItem {
+            Box::leak(Box::new(rsx!{SidebarItem {
                 name: item.name,
                 icon: item.icon,
-                body: item.body
-            })
-            .into_vnode(&cx)
-        })
-        .collect::<Vec<DynamicNode>>();
+                body: item.body.unwrap(),
+            }}))
+        }).collect::<Vec<&mut LazyNodes>>();
 
-    let return_items = return_items
-        .into_iter()
-        .map(|item| -> VNode {
 
-        })
-        .collect::<Vec<VNode>>();
+    cx.render(rsx! {
+        div {
+            id: "sidebar-items",
+            [for item in return_items {
+                item
+            }]
+        }
+    })
 }
 
 #[derive(Props)]
@@ -130,15 +129,15 @@ pub struct SidebarItemProps {
     /// SidebarItemProps {
     ///     name: "Home",
     ///     icon: "home",
-    ///     body: rsx!{
+    ///     body: &cx.render(rsx!{
     ///         button {
     ///             alt: "Click me",
     ///             onclick: |_| page_set("home")
     ///         }
-    ///     }
+    ///     })
     /// }
     /// ```
-    pub body: DynamicNode<'static>,
+    pub body: Element<'static>
 }
 
 impl PartialEq for SidebarItemProps {
@@ -148,11 +147,26 @@ impl PartialEq for SidebarItemProps {
     }
 }
 
-pub fn SidebarItem(cx: Scope<'static, SidebarItemProps>) -> Element {
+#[derive(Props)]
+pub struct SidebarItemInternalProps {
+    pub name: &'static str,
+    pub icon: &'static str,
+    pub body: VNode<'static>,
+}
+
+impl PartialEq for SidebarItemInternalProps {
+    /// WARNING - This does not compare the body!!!
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.icon == other.icon
+    }
+}
+
+pub fn SidebarItem(cx: Scope<'static, SidebarItemInternalProps>) -> Element {
     let class = format!(
         "sidebar-item sidebar-item-{}",
         cx.props.name.to_lowercase().replace(" ", "-")
     );
+
 
     cx.render(rsx! {
         div {
@@ -167,7 +181,7 @@ pub fn SidebarItem(cx: Scope<'static, SidebarItemProps>) -> Element {
                 class: "sidebar-item-name",
                 "{cx.props.name}"
             },
-            cx.props.body
+
         }
     })
 }

@@ -1,21 +1,17 @@
-use dioxus::core::IntoVNode;
-#[allow(non_snake_case)]
-
-use dioxus::prelude::*;
 use crate::PAGE;
-use crate::NODE_FACTORY;
-
+use dioxus::core::{DynamicNode, IntoDynNode};
+#[allow(non_snake_case)]
+use dioxus::prelude::*;
+use fermi::{use_read, use_set};
 
 pub fn Sidebar(cx: Scope) -> Element {
     let set_page = use_set(&cx, PAGE);
-    let node_factory = use_read(&cx, NODE_FACTORY);
-    let node_factory = &node_factory.unwrap();
 
     let sidebar_items = vec![
         SidebarItemProps {
             name: "Home",
             icon: "home",
-            body: rsx!{
+            body: rsx! {
                 button {
                     alt: "Home",
                     onclick: move |_| {
@@ -23,12 +19,13 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }.into_vnode(**node_factory),
+            }
+            .into_vnode(&cx),
         },
         SidebarItemProps {
             name: "Our Mission",
             icon: "target",
-            body: rsx!{
+            body: rsx! {
                 button {
                     alt: "Mission",
                     onclick: move |_| {
@@ -36,12 +33,13 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }.into_vnode(**node_factory),
+            }
+            .into_vnode(&cx),
         },
         SidebarItemProps {
             name: "About",
             icon: "info",
-            body: rsx!{
+            body: rsx! {
                 button {
                     alt: "About",
                     onclick: move |_| {
@@ -49,12 +47,13 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }.into_vnode(**node_factory),
+            }
+            .into_vnode(&cx),
         },
         SidebarItemProps {
             name: "Contact",
             icon: "mail",
-            body: rsx!{
+            body: rsx! {
                 button {
                     alt: "Contact",
                     onclick: move |_| {
@@ -62,12 +61,13 @@ pub fn Sidebar(cx: Scope) -> Element {
                         cx.needs_update();
                     }
                 }
-            }.into_vnode(**node_factory),
-        }
+            }
+            .into_vnode(&cx),
+        },
     ];
 
     let the_sidebar_items = &sidebar_items;
-    cx.render(rsx!{
+    cx.render(rsx! {
         div {
             id: "sidebar",
             link {
@@ -90,31 +90,35 @@ impl PartialEq for SidebarItemsProps {
         if self.items.len() != other.items.len() {
             return false;
         }
-        self.items.clone().into_iter().zip(other.items.clone().into_iter()).all(|(a, b)| a == b)
+        self.items
+            .clone()
+            .into_iter()
+            .zip(other.items.clone().into_iter())
+            .all(|(a, b)| a == b)
     }
 }
 
 pub fn SidebarItems(cx: Scope<SidebarItemsProps>) -> Element {
-    let node_factory= use_read(&cx, NODE_FACTORY);
-    let node_factory = &node_factory.unwrap();
-
     let items = cx.props.items.clone();
-    let return_items = items.into_iter().map(|item| {
-        rsx!(
-            SidebarItem {
+
+    let return_items = items
+        .into_iter()
+        .map(|item| {
+            rsx!(SidebarItem {
                 name: item.name,
                 icon: item.icon,
                 body: item.body
-            }
-        ).into_vnode(**node_factory)
-    }).collect::<Vec<VNode>>();
+            })
+            .into_vnode(&cx)
+        })
+        .collect::<Vec<DynamicNode>>();
 
-    cx.render(rsx!{
-        div {
-            id: "sidebar-items",
-            return_items
-        }
-    })
+    let return_items = return_items
+        .into_iter()
+        .map(|item| -> VNode {
+
+        })
+        .collect::<Vec<VNode>>();
 }
 
 #[derive(Props)]
@@ -134,7 +138,7 @@ pub struct SidebarItemProps {
     ///     }
     /// }
     /// ```
-    pub body: VNode<'static>
+    pub body: DynamicNode<'static>,
 }
 
 impl PartialEq for SidebarItemProps {
@@ -145,9 +149,12 @@ impl PartialEq for SidebarItemProps {
 }
 
 pub fn SidebarItem(cx: Scope<'static, SidebarItemProps>) -> Element {
-    let class = format!("sidebar-item sidebar-item-{}", cx.props.name.to_lowercase().replace(" ", "-"));
+    let class = format!(
+        "sidebar-item sidebar-item-{}",
+        cx.props.name.to_lowercase().replace(" ", "-")
+    );
 
-    cx.render(rsx!{
+    cx.render(rsx! {
         div {
             class: "sidebar-item",
             div {
